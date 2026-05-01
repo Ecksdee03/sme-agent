@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>SME Assistant</title>
+  <style>
+    body { font-family: sans-serif; max-width: 700px; margin: 40px auto; padding: 0 20px; }
+    h1 { font-size: 1.4rem; margin-bottom: 20px; }
+    #chat { border: 1px solid #ddd; border-radius: 8px; padding: 16px; height: 400px; overflow-y: auto; margin-bottom: 12px; background: #fafafa; }
+    .message { margin-bottom: 12px; }
+    .user { text-align: right; }
+    .user span { background: #0070f3; color: white; padding: 8px 12px; border-radius: 12px; display: inline-block; max-width: 80%; }
+    .agent span { background: #eee; padding: 8px 12px; border-radius: 12px; display: inline-block; max-width: 80%; }
+    #input-row { display: flex; gap: 8px; }
+    #input { flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 1rem; }
+    button { padding: 10px 20px; background: #0070f3; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 1rem; }
+    button:disabled { background: #aaa; }
+    .thinking { color: #999; font-style: italic; }
+  </style>
+</head>
+<body>
+  <h1>SME Assistant</h1>
+  <div id="chat"></div>
+  <div id="input-row">
+    <input id="input" type="text" placeholder="Ask about your orders, revenue..." />
+    <button id="send">Send</button>
+  </div>
+
+  <script>
+    const chat = document.getElementById("chat");
+    const input = document.getElementById("input");
+    const send = document.getElementById("send");
+
+    function addMessage(text, role) {
+      const div = document.createElement("div");
+      div.className = `message ${role}`;
+      const span = document.createElement("span");
+      span.textContent = text;
+      div.appendChild(span);
+      chat.appendChild(div);
+      chat.scrollTop = chat.scrollHeight;
+    }
+
+    async function sendMessage() {
+      const message = input.value.trim();
+      if (!message) return;
+
+      addMessage(message, "user");
+      input.value = "";
+      send.disabled = true;
+
+      // Show thinking indicator
+      const thinking = document.createElement("div");
+      thinking.className = "message agent thinking";
+      thinking.innerHTML = "<span>Thinking...</span>";
+      thinking.id = "thinking";
+      chat.appendChild(thinking);
+
+      try {
+        const res = await fetch("/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message }),
+        });
+        const data = await res.json();
+        document.getElementById("thinking").remove();
+        addMessage(data.answer, "agent");
+      } catch {
+        document.getElementById("thinking").remove();
+        addMessage("Something went wrong. Please try again.", "agent");
+      }
+
+      send.disabled = false;
+      input.focus();
+    }
+
+    send.addEventListener("click", sendMessage);
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") sendMessage();
+    });
+  </script>
+</body>
+</html>
